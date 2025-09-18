@@ -5,7 +5,6 @@ import 'core/providers/auth_provider.dart';
 import 'core/providers/bus_provider.dart';
 import 'core/providers/language_provider.dart';
 
-import 'features/tracking/presentation/screens/map_screen.dart';
 import 'features/tracking/presentation/screens/route_details_screen.dart';
 import 'features/notifications/presentation/screens/notification_screen.dart';
 import 'features/language/presentation/screens/language_selection_screen.dart';
@@ -52,7 +51,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _tabs = [
     RouteDetailsScreen(), // 👈 HomePage is RouteDetails
     NotificationScreen(), // 👈 Notifications in new tab
-    MapScreen(), // 👈 Extra tab: Map (optional)
+    VoiceCommandScreen(), // 👈 Liked buses screen
   ];
 
   void _onTabTapped(int index) {
@@ -92,16 +91,6 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.favorite, color: Colors.orange),
-              title: const Text("Favorites"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => VoiceCommandScreen()),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -116,7 +105,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.notifications),
             label: "Notifications",
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Liked Buses"),
         ],
       ),
     );

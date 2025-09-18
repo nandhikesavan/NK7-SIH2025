@@ -226,23 +226,42 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                                 color: Colors.orange,
                               ),
                               title: Text("Bus: ${bus.busNumber}"),
-                              trailing: Padding(
-                                padding: EdgeInsets.only(right: 8.0),
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => MapScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Icon(
-                                    Icons.location_on,
-                                    color: Colors.green,
-                                    size: 30,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Heart icon for liking
+                                  InkWell(
+                                    onTap: () {
+                                      busProvider.toggleLike(bus);
+                                    },
+                                    child: Icon(
+                                      busProvider.isLiked(bus) 
+                                          ? Icons.favorite 
+                                          : Icons.favorite_border,
+                                      color: busProvider.isLiked(bus) 
+                                          ? Colors.red 
+                                          : Colors.grey,
+                                      size: 24,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  // Location icon
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MapScreen(bus: bus),
+                                        ),
+                                      );
+                                    },
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Colors.green,
+                                      size: 30,
+                                    ),
+                                  ),
+                                ],
                               ),
                               subtitle: Text(
                                 "From: ${bus.fromCity} (${bus.fromArrival})\n"
