@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../../core/providers/bus_provider.dart';
 import '../../bus_station_page.dart';
+import '../screens/map_screen.dart';
 
 class RouteDetailsScreen extends StatefulWidget {
   const RouteDetailsScreen({super.key});
@@ -225,6 +226,24 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                                 color: Colors.orange,
                               ),
                               title: Text("Bus: ${bus.busNumber}"),
+                              trailing: Padding(
+                                padding: EdgeInsets.only(right: 8.0),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => MapScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: Colors.green,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
                               subtitle: Text(
                                 "From: ${bus.fromCity} (${bus.fromArrival})\n"
                                 "To: ${bus.toCity} (${bus.toArrival})",
@@ -233,7 +252,8 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => BusStationPage(bus: bus),
+                                    builder:
+                                        (context) => BusStationPage(bus: bus),
                                   ),
                                 );
                               },
