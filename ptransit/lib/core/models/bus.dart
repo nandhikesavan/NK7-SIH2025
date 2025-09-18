@@ -22,7 +22,9 @@ class Bus {
       busNumber: json['busNumber'],
       fromArrival: json['fromArrival'],
       toArrival: json['toArrival'],
-      stops: (json['stops'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
+      stops:
+          (json['stops'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          [],
     );
   }
 }
