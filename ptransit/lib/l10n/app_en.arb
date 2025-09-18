@@ -1,0 +1,13 @@
+{
+  "appName": "Real-Time Public Transport Tracking",
+  "searchFrom": "Search From",
+  "searchTo": "Search To",
+  "search": "Search",
+  "login": "Login",
+  "register": "Register",
+  "map": "Map",
+  "routeDetails": "Route Details",
+  "notifications": "Notifications",
+  "selectLanguage": "Select Language",
+  "voiceCommand": "Voice Command"
+}
