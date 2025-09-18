@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/bus_provider.dart';
 import 'core/providers/language_provider.dart';
+import 'core/providers/notification_provider.dart';
 
 import 'features/tracking/presentation/screens/route_details_screen.dart';
 import 'features/notifications/presentation/screens/notification_screen.dart';
@@ -24,15 +25,20 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BusProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Punjab Bus Tracker',
-        theme: ThemeData(
-          primarySwatch: Colors.orange,
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        ),
-        home: const HomePage(), // 👈 HomePage will now be RouteDetails
+      child: Consumer<LanguageProvider>(
+        builder: (context, languageProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: languageProvider.translate('app_title'),
+            theme: ThemeData(
+              primarySwatch: Colors.orange,
+              scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+            ),
+            home: const HomePage(),
+          );
+        },
       ),
     );
   }
@@ -62,31 +68,33 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Punjab Bus Tracker"),
-        centerTitle: true,
-      ),
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(languageProvider.translate('app_title')),
+            centerTitle: true,
+          ),
       drawer: Drawer(
         child: ListView(
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.orange),
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.orange),
               child: Center(
                 child: Text(
-                  "Menu",
-                  style: TextStyle(color: Colors.white, fontSize: 22),
+                  languageProvider.translate('menu'),
+                  style: const TextStyle(color: Colors.white, fontSize: 22),
                 ),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.language, color: Colors.orange),
-              title: const Text("Language Selection"),
+              title: Text(languageProvider.translate('language_selection')),
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => LanguageSelectionScreen(),
+                    builder: (context) => const LanguageSelectionScreen(),
                   ),
                 );
               },
@@ -99,15 +107,23 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         onTap: _onTabTapped,
         selectedItemColor: Colors.orange,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.alt_route), label: "Routes"),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: "Notifications",
+            icon: const Icon(Icons.alt_route), 
+            label: languageProvider.translate('routes'),
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Liked Buses"),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.notifications),
+            label: languageProvider.translate('notifications'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.favorite), 
+            label: languageProvider.translate('liked_buses'),
+          ),
         ],
       ),
+        );
+      },
     );
   }
 }

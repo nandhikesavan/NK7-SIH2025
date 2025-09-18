@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/models/bus.dart';
+import '../../../../core/providers/notification_provider.dart';
 
 class MapScreen extends StatefulWidget {
   final Bus bus;
@@ -24,6 +26,13 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _initializeMap();
+    _checkExpiredNotifications();
+  }
+
+  Future<void> _checkExpiredNotifications() async {
+    // Check for expired notifications when the screen loads
+    final notificationProvider = context.read<NotificationProvider>();
+    await notificationProvider.checkAndCleanupExpiredNotifications();
   }
 
   Future<void> _initializeMap() async {
@@ -177,6 +186,101 @@ class _MapScreenState extends State<MapScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              final isScheduled = notificationProvider.isNotificationScheduled(
+                widget.bus.busNumber,
+                widget.bus.toCity,
+              );
+              final hasArrived = notificationProvider.hasBusArrived(widget.bus);
+              
+              return IconButton(
+                icon: Icon(
+                  hasArrived 
+                      ? Icons.notifications_off 
+                      : isScheduled 
+                          ? Icons.notifications_active 
+                          : Icons.notifications_off,
+                  color: hasArrived 
+                      ? Colors.grey 
+                      : isScheduled 
+                          ? Colors.green 
+                          : Colors.grey,
+                ),
+                onPressed: hasArrived ? null : () async {
+                  if (isScheduled) {
+                    // Show dialog to cancel notification
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Cancel Notification'),
+                        content: Text('Cancel notification for Bus ${widget.bus.busNumber}?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('No'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                    
+                    if (result == true) {
+                      // Find and cancel the notification
+                      final alert = notificationProvider.scheduledNotifications.firstWhere(
+                        (alert) => alert.busNumber == widget.bus.busNumber && alert.toCity == widget.bus.toCity,
+                      );
+                      await notificationProvider.cancelBusNotification(alert.id);
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Notification cancelled for Bus ${widget.bus.busNumber}'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    // Check if bus has already arrived before scheduling
+                    if (notificationProvider.hasBusArrived(widget.bus)) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Bus ${widget.bus.busNumber} has already arrived at ${widget.bus.toCity}'),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    
+                    // Schedule notification
+                    await notificationProvider.scheduleBusNotification(widget.bus);
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Alerts scheduled for Bus ${widget.bus.busNumber} (15, 10, 5 min)'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                },
+                tooltip: hasArrived 
+                    ? 'Bus has arrived - alerts disabled' 
+                    : isScheduled 
+                        ? 'Cancel notification' 
+                        : 'Schedule notification',
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {

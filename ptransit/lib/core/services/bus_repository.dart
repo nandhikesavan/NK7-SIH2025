@@ -12,8 +12,8 @@ class BusRepository {
         fromCity: "Ariyalur",
         toCity: "Chengalpattu",
         busNumber: "TN3673",
-        fromArrival: "09:30 am",
-        toArrival: "08:00 am",
+        fromArrival: "09:30 pm",
+        toArrival: "03 : 40 am",
         stops: ['Ariyalur', 'Tiruppur', 'Salem', 'Namakkal', 'Chengalpattu'],
       ),
 
