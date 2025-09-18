@@ -1,0 +1,37 @@
+[
+  {
+    "fromCity": "Delhi",
+    "toCity": "Agra",
+    "busNumber": "R16",
+    "fromArrival": "08:30",
+    "toArrival": "11:45"
+  },
+  {
+    "fromCity": "Delhi",
+    "toCity": "Jaipur",
+    "busNumber": "C12",
+    "fromArrival": "07:15",
+    "toArrival": "12:00"
+  },
+  {
+    "fromCity": "Mumbai",
+    "toCity": "Pune",
+    "busNumber": "M22",
+    "fromArrival": "09:00",
+    "toArrival": "11:15"
+  },
+  {
+    "fromCity": "Bengaluru",
+    "toCity": "Chennai",
+    "busNumber": "B45",
+    "fromArrival": "06:00",
+    "toArrival": "11:30"
+  },
+  {
+    "fromCity": "Chennai",
+    "toCity": "Madurai",
+    "busNumber": "C78",
+    "fromArrival": "06:30",
+    "toArrival": "12:10"
+  }
+]

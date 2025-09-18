@@ -1,0 +1,13 @@
+{
+  "appName": "रीयल-टाइम पब्लिक ट्रांसपोर्ट ट्रैकिंग",
+  "searchFrom": "से खोजें",
+  "searchTo": "तक खोजें",
+  "search": "खोजें",
+  "login": "लॉगिन",
+  "register": "रजिस्टर",
+  "map": "मानचित्र",
+  "routeDetails": "रूट विवरण",
+  "notifications": "सूचनाएँ",
+  "selectLanguage": "भाषा चुनें",
+  "voiceCommand": "वॉयस कमांड"
+}
