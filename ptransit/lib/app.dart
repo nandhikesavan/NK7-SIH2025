@@ -93,8 +93,8 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.mic, color: Colors.orange),
-              title: const Text("Voice Assistant"),
+              leading: const Icon(Icons.favorite, color: Colors.orange),
+              title: const Text("Favorites"),
               onTap: () {
                 Navigator.push(
                   context,
