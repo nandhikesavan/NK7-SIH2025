@@ -21,54 +21,40 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
   }
 
+  Future<void> _refreshNotifications() async {
+    final provider = context.read<NotificationProvider>();
+    await provider.initialize();
+    await provider.checkAndCleanupExpiredNotifications();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bus Notifications'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+        // 🔹 Removed refColor.fromARGB(255, 0, 0, 0)& "Test Notification" menu
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              context.read<NotificationProvider>().initialize();
-            },
-          ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               final provider = context.read<NotificationProvider>();
-              switch (value) {
-                case 'test':
-                  await provider.showTestNotification();
-                  break;
-                case 'clear_all':
-                  await _showClearAllDialog(context);
-                  break;
+              if (value == 'clear_all') {
+                await _showClearAllDialog(context);
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'test',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications_active),
-                    SizedBox(width: 8),
-                    Text('Test Notification'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'clear_all',
-                child: Row(
-                  children: [
-                    Icon(Icons.clear_all, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Clear All', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'clear_all',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Clear All', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
           ),
         ],
       ),
@@ -88,97 +74,95 @@ class _NotificationScreenState extends State<NotificationScreen> {
           }
 
           if (provider.scheduledNotifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_off,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
+            return RefreshIndicator(
+              onRefresh: _refreshNotifications,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 100),
+                  Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
                     'No Scheduled Notifications',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'Schedule multiple alerts (15, 10, 5 min) from the bus tracking screen',
                     style: TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await provider.showTestNotification();
-                    },
-                    icon: const Icon(Icons.notifications_active),
-                    label: const Text('Test Notification'),
                   ),
                 ],
               ),
             );
           }
 
-          return Column(
-            children: [
-              // Header with count
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                color: Colors.orange.shade50,
-                child: Row(
-                  children: [
-                    Icon(Icons.schedule, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${provider.scheduledNotifications.length} Scheduled Alerts',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+          return RefreshIndicator(
+            onRefresh: _refreshNotifications,
+            child: Column(
+              children: [
+                // Header with count
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.orange.shade50,
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${provider.scheduledNotifications.length} Scheduled Alerts',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '15, 10, 5 min before arrival',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                      const Spacer(),
+                      Text(
+                        '15, 10, 5 min before arrival',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              // Notifications list
-              Expanded(
-                child: ListView.builder(
-                  itemCount: provider.scheduledNotifications.length,
-                  itemBuilder: (context, index) {
-                    final alert = provider.scheduledNotifications[index];
-                    return _buildNotificationCard(context, alert, provider);
-                  },
+                // Notifications list
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: provider.scheduledNotifications.length,
+                    itemBuilder: (context, index) {
+                      final alert = provider.scheduledNotifications[index];
+                      return _buildNotificationCard(context, alert, provider);
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, NotificationAlert alert, NotificationProvider provider) {
+  Widget _buildNotificationCard(
+    BuildContext context,
+    NotificationAlert alert,
+    NotificationProvider provider,
+  ) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.orange,
           child: Text(
-            alert.busNumber.substring(2), // Show last part of bus number
+            alert.busNumber.substring(2),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -201,10 +185,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 const SizedBox(width: 4),
                 Text(
                   'Arrives at ${alert.arrivalTime}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -245,23 +226,30 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Future<void> _showCancelDialog(BuildContext context, NotificationAlert alert, NotificationProvider provider) async {
+  Future<void> _showCancelDialog(
+    BuildContext context,
+    NotificationAlert alert,
+    NotificationProvider provider,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Notification'),
-        content: Text('Are you sure you want to cancel the notification for Bus ${alert.busNumber}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cancel Notification'),
+            content: Text(
+              'Are you sure you want to cancel the notification for Bus ${alert.busNumber}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
 
     if (result == true) {
@@ -280,20 +268,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _showClearAllDialog(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Notifications'),
-        content: const Text('Are you sure you want to cancel all scheduled notifications?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Clear All Notifications'),
+            content: const Text(
+              'Are you sure you want to cancel all scheduled notifications?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
 
     if (result == true) {
@@ -324,10 +315,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
           Text(

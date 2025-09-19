@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../core/models/bus.dart';
+import '../../../../core/models/bus.dart';
 
 class BusStationPage extends StatelessWidget {
   final Bus bus;
 
-  const BusStationPage({Key? key, required this.bus}) : super(key: key);
+  const BusStationPage({super.key, required this.bus});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bus Stations'),
+        title: Text('Bus ${bus.busNumber} Stations'),
         backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
@@ -28,7 +28,7 @@ class BusStationPage extends StatelessWidget {
                   BoxShadow(
                     color: Colors.deepPurple.withOpacity(0.1),
                     blurRadius: 8,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -37,35 +37,41 @@ class BusStationPage extends StatelessWidget {
                 children: [
                   Text(
                     'Bus: ${bus.busNumber}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.deepPurple,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.location_on, color: Colors.green),
-                      SizedBox(width: 4),
+                      const Icon(Icons.location_on, color: Colors.green),
+                      const SizedBox(width: 4),
                       Text(
                         '${bus.fromCity} (${bus.fromArrival})',
-                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
                       ),
-                      Spacer(),
-                      Icon(Icons.flag, color: Colors.red),
-                      SizedBox(width: 4),
+                      const Spacer(),
+                      const Icon(Icons.flag, color: Colors.red),
+                      const SizedBox(width: 4),
                       Text(
                         '${bus.toCity} (${bus.toArrival})',
-                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 24),
+            const Text(
               'Stations',
               style: TextStyle(
                 fontSize: 18,
@@ -73,7 +79,7 @@ class BusStationPage extends StatelessWidget {
                 color: Colors.deepPurple,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Expanded(
               child: ListView.separated(
                 itemCount: bus.stops.length,
@@ -91,7 +97,6 @@ class BusStationPage extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    color: Colors.white,
                     child: ListTile(
                       leading: Icon(
                         index == 0
@@ -108,19 +113,19 @@ class BusStationPage extends StatelessWidget {
                       ),
                       title: Text(
                         bus.stops[index],
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       trailing:
                           index == 0
-                              ? Text(
+                              ? const Text(
                                 'Start',
                                 style: TextStyle(color: Colors.green),
                               )
                               : (index == bus.stops.length - 1
-                                  ? Text(
+                                  ? const Text(
                                     'End',
                                     style: TextStyle(color: Colors.red),
                                   )

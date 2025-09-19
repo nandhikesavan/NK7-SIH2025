@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:firebase_database/firebase_database.dart'; // 👈 add this
 
 import '../../../../core/providers/bus_provider.dart';
 import '../../bus_station_page.dart';
@@ -18,6 +19,13 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
   final TextEditingController _toController = TextEditingController();
   late SpeechToText _speechToText;
   bool _isListening = false;
+
+  final DatabaseReference _searchRef = FirebaseDatabase.instance.ref().child(
+    "searched_buses",
+  );
+  final DatabaseReference _likedRef = FirebaseDatabase.instance.ref().child(
+    "liked_buses",
+  );
 
   @override
   void initState() {
@@ -45,7 +53,6 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 20),
               ),
               const SizedBox(height: 20),
-              // Animated colorful bars
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (i) {
@@ -103,7 +110,7 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
 
       if (available) {
         setState(() => _isListening = true);
-        _showListeningSheet(controller); // 👈 show the listening UI
+        _showListeningSheet(controller);
         _speechToText.listen(
           onResult: (result) {
             setState(() {
@@ -197,10 +204,31 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: () {
-                busProvider.findBuses(
-                  _fromController.text.trim(),
-                  _toController.text.trim(),
-                );
+                final fromCity = _fromController.text.trim();
+                final toCity = _toController.text.trim();
+
+                // ✅ 1. Keep provider logic
+                busProvider.findBuses(fromCity, toCity);
+
+                // ✅ 2. Save search to Firebase
+                final searchRef = _searchRef.push();
+                searchRef.set({
+                  "fromCity": fromCity,
+                  "toCity": toCity,
+                  "timestamp": DateTime.now().toIso8601String(),
+                });
+
+                // ✅ 3. Save buses under this search
+                for (var bus in busProvider.filteredBuses) {
+                  searchRef.child("buses").push().set({
+                    "busNumber": bus.busNumber,
+                    "fromCity": bus.fromCity,
+                    "toCity": bus.toCity,
+                    "fromArrival": bus.fromArrival,
+                    "toArrival": bus.toArrival,
+                    "stops": bus.stops,
+                  });
+                }
               },
               child: const Text(
                 "Find Buses",
@@ -229,33 +257,50 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Heart icon for liking
+                                  // ❤️ Like/Unlike + Firebase integration
                                   InkWell(
                                     onTap: () {
                                       busProvider.toggleLike(bus);
+
+                                      if (busProvider.isLiked(bus)) {
+                                        // Save to Firebase
+                                        _likedRef.child(bus.busNumber).set({
+                                          "busNumber": bus.busNumber,
+                                          "fromCity": bus.fromCity,
+                                          "toCity": bus.toCity,
+                                          "fromArrival": bus.fromArrival,
+                                          "toArrival": bus.toArrival,
+                                          "stops": bus.stops,
+                                          "location": bus.location,
+                                        });
+                                      } else {
+                                        // Remove from Firebase
+                                        _likedRef.child(bus.busNumber).remove();
+                                      }
                                     },
                                     child: Icon(
-                                      busProvider.isLiked(bus) 
-                                          ? Icons.favorite 
+                                      busProvider.isLiked(bus)
+                                          ? Icons.favorite
                                           : Icons.favorite_border,
-                                      color: busProvider.isLiked(bus) 
-                                          ? Colors.red 
-                                          : Colors.grey,
+                                      color:
+                                          busProvider.isLiked(bus)
+                                              ? Colors.red
+                                              : Colors.grey,
                                       size: 24,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // Location icon
                                   InkWell(
                                     onTap: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => MapScreen(bus: bus),
+                                          builder:
+                                              (context) => MapScreen(bus: bus),
                                         ),
                                       );
                                     },
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.location_on,
                                       color: Colors.green,
                                       size: 30,

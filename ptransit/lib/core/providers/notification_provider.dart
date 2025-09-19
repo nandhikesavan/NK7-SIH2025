@@ -14,7 +14,7 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       await _notificationService.initialize();
       await _loadPendingNotifications();
@@ -30,10 +30,10 @@ class NotificationProvider extends ChangeNotifier {
     try {
       final pending = await _notificationService.getPendingNotifications();
       _scheduledNotifications.clear();
-      
+
       // Group notifications by bus to avoid duplicates
       final Map<String, NotificationAlert> busAlerts = {};
-      
+
       for (final notification in pending) {
         // Parse notification data to create NotificationAlert
         if (notification.payload != null) {
@@ -42,9 +42,9 @@ class NotificationProvider extends ChangeNotifier {
             final busNumber = parts[1];
             final toCity = parts[2];
             // final minutes = parts[3]; // Not used in current implementation
-            
+
             final busKey = '${busNumber}_$toCity';
-            
+
             if (!busAlerts.containsKey(busKey)) {
               final alert = NotificationAlert(
                 id: '${busNumber}_$toCity',
@@ -52,16 +52,18 @@ class NotificationProvider extends ChangeNotifier {
                 fromCity: 'Unknown', // We don't store this in payload
                 toCity: toCity,
                 arrivalTime: 'Unknown', // We don't store this in payload
-                scheduledTime: DateTime.now().add(const Duration(minutes: 15)), // Approximate
+                scheduledTime: DateTime.now().add(
+                  const Duration(minutes: 15),
+                ), // Approximate
                 busId: busNumber,
               );
-              
+
               busAlerts[busKey] = alert;
             }
           }
         }
       }
-      
+
       _scheduledNotifications.addAll(busAlerts.values);
     } catch (e) {
       print('Error loading pending notifications: $e');
@@ -71,7 +73,7 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> scheduleBusNotification(Bus bus) async {
     try {
       await _notificationService.scheduleBusArrivalNotification(bus);
-      
+
       // Add to our list
       final alert = NotificationAlert.fromBus(
         bus.hashCode.toString(),
@@ -81,7 +83,7 @@ class NotificationProvider extends ChangeNotifier {
         bus.toArrival,
         DateTime.now().add(const Duration(minutes: 15)), // This is approximate
       );
-      
+
       _scheduledNotifications.add(alert);
       notifyListeners();
     } catch (e) {
@@ -95,7 +97,7 @@ class NotificationProvider extends ChangeNotifier {
         (alert) => alert.id == notificationId,
         orElse: () => throw Exception('Notification not found'),
       );
-      
+
       if (alert.busId != null) {
         await _notificationService.cancelBusNotification(
           Bus(
@@ -104,11 +106,14 @@ class NotificationProvider extends ChangeNotifier {
             busNumber: alert.busNumber,
             fromArrival: '',
             toArrival: alert.arrivalTime,
+            stops: [],
           ),
         );
       }
-      
-      _scheduledNotifications.removeWhere((alert) => alert.id == notificationId);
+
+      _scheduledNotifications.removeWhere(
+        (alert) => alert.id == notificationId,
+      );
       notifyListeners();
     } catch (e) {
       print('Error canceling notification: $e');
@@ -145,17 +150,19 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> checkAndCleanupExpiredNotifications() async {
     // Remove notifications for buses that have already arrived
-    final expiredAlerts = _scheduledNotifications.where((alert) {
-      // Create a temporary bus object to check arrival time
-      final tempBus = Bus(
-        fromCity: alert.fromCity,
-        toCity: alert.toCity,
-        busNumber: alert.busNumber,
-        fromArrival: '',
-        toArrival: alert.arrivalTime,
-      );
-      return hasBusArrived(tempBus);
-    }).toList();
+    final expiredAlerts =
+        _scheduledNotifications.where((alert) {
+          // Create a temporary bus object to check arrival time
+          final tempBus = Bus(
+            fromCity: alert.fromCity,
+            toCity: alert.toCity,
+            busNumber: alert.busNumber,
+            fromArrival: '',
+            toArrival: alert.arrivalTime,
+            stops: [],
+          );
+          return hasBusArrived(tempBus);
+        }).toList();
 
     for (final alert in expiredAlerts) {
       _scheduledNotifications.remove(alert);
