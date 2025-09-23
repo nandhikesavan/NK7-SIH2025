@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../models/bus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -42,6 +43,12 @@ class NotificationService {
     _isInitialized = true;
   }
 
+  Future<bool> requestNotificationPermissions() async {
+    // iOS permissions are requested during initialization; Android 13+ needs runtime permission
+    final status = await Permission.notification.request();
+    return status.isGranted;
+  }
+
   void _onNotificationTapped(NotificationResponse response) {
     // Handle notification tap
     print('Notification tapped: ${response.payload}');
@@ -49,6 +56,11 @@ class NotificationService {
 
   Future<void> scheduleBusArrivalNotification(Bus bus) async {
     await initialize();
+    final granted = await requestNotificationPermissions();
+    if (!granted) {
+      print('Notification permission not granted');
+      return;
+    }
 
     try {
       // Parse the arrival time
@@ -58,77 +70,7 @@ class NotificationService {
         return;
       }
 
-      // Check if arrival time has already passed
-      if (arrivalTime.isBefore(DateTime.now())) {
-        print('Arrival time has already passed for bus ${bus.busNumber}');
-        return;
-      }
-
-      // Schedule multiple notifications (15, 10, and 5 minutes before)
-      final alertTimes = [15, 10, 5];
-      
-      for (int i = 0; i < alertTimes.length; i++) {
-        final minutes = alertTimes[i];
-        final notificationTime = arrivalTime.subtract(Duration(minutes: minutes));
-        
-        // Check if notification time is in the future
-        if (notificationTime.isBefore(DateTime.now())) {
-          print('Notification time for $minutes min alert is in the past, skipping');
-          continue;
-        }
-
-        // Create unique ID for each alert
-        final notificationId = bus.hashCode + i;
-        
-        // Schedule the notification with enhanced display
-        await _notifications.zonedSchedule(
-          notificationId,
-          '🚌 Bus Alert - $minutes min',
-          'Bus ${bus.busNumber} arriving at ${bus.toCity} in $minutes minutes!',
-          tz.TZDateTime.from(notificationTime, tz.local),
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              'bus_arrival_$minutes',
-              'Bus Arrival Notifications',
-              channelDescription: 'Notifications for bus arrival times',
-              importance: Importance.max,
-              priority: Priority.max,
-              icon: '@mipmap/ic_launcher',
-              color: _getAlertColor(minutes),
-              playSound: true,
-              enableVibration: true,
-              fullScreenIntent: true,
-              showWhen: true,
-              when: notificationTime.millisecondsSinceEpoch,
-              usesChronometer: false,
-              category: AndroidNotificationCategory.alarm,
-              visibility: NotificationVisibility.public,
-              ongoing: false,
-              autoCancel: true,
-              largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-              styleInformation: BigTextStyleInformation(
-                'Bus ${bus.busNumber} will arrive at ${bus.toCity} in $minutes minutes!\n\nRoute: ${bus.fromCity} → ${bus.toCity}\nArrival Time: ${bus.toArrival}',
-                contentTitle: '🚌 Bus Alert - $minutes min',
-                htmlFormatBigText: true,
-                summaryText: 'Bus Tracking Alert',
-              ),
-            ),
-            iOS: DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-              sound: 'default',
-              badgeNumber: 1,
-              categoryIdentifier: 'bus_arrival',
-            ),
-          ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-          payload: 'bus_${bus.busNumber}_${bus.toCity}_$minutes',
-        );
-
-        print('Scheduled $minutes min notification for bus ${bus.busNumber} at $notificationTime');
-      }
+      await scheduleBusArrivalNotificationWithOffsets(bus, const [15, 10, 5], parsedArrival: arrivalTime);
 
       // Schedule a cleanup notification after arrival time to auto-disable alerts
       final cleanupTime = arrivalTime.add(const Duration(minutes: 1));
@@ -157,9 +99,73 @@ class NotificationService {
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
           payload: 'bus_complete_${bus.busNumber}_${bus.toCity}',
         );
+        // Also stop repeating reminder if running
+        await _notifications.cancel(bus.hashCode + 200);
       }
     } catch (e) {
       print('Error scheduling notifications: $e');
+    }
+  }
+
+  Future<void> scheduleBusArrivalNotificationWithOffsets(
+    Bus bus,
+    List<int> minutesOffsets, {
+    DateTime? parsedArrival,
+  }) async {
+    await initialize();
+    final granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    final arrivalTime = parsedArrival ?? _parseTime(bus.toArrival);
+    if (arrivalTime == null) return;
+    if (arrivalTime.isBefore(DateTime.now())) return;
+
+    for (int i = 0; i < minutesOffsets.length; i++) {
+      final minutes = minutesOffsets[i];
+      final notificationTime = arrivalTime.subtract(Duration(minutes: minutes));
+      if (notificationTime.isBefore(DateTime.now())) continue;
+
+      final notificationId = bus.hashCode + i;
+      await _notifications.zonedSchedule(
+        notificationId,
+        '🚌 Bus Alert - $minutes min',
+        'Bus ${bus.busNumber} arriving at ${bus.toCity} in $minutes minutes!',
+        tz.TZDateTime.from(notificationTime, tz.local),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'bus_arrival_$minutes',
+            'Bus Arrival Notifications',
+            channelDescription: 'Notifications for bus arrival times',
+            importance: Importance.max,
+            priority: Priority.max,
+            icon: '@mipmap/ic_launcher',
+            color: _getAlertColor(minutes),
+            playSound: true,
+            enableVibration: true,
+            fullScreenIntent: true,
+            showWhen: true,
+            when: notificationTime.millisecondsSinceEpoch,
+            category: AndroidNotificationCategory.alarm,
+            visibility: NotificationVisibility.public,
+            autoCancel: true,
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+            styleInformation: BigTextStyleInformation(
+              'Bus ${bus.busNumber} will arrive at ${bus.toCity} in $minutes minutes!\n\nRoute: ${bus.fromCity} → ${bus.toCity}\nArrival Time: ${bus.toArrival}',
+              contentTitle: '🚌 Bus Alert - $minutes min',
+              htmlFormatBigText: true,
+              summaryText: 'Bus Tracking Alert',
+            ),
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'bus|${bus.busNumber}|${bus.fromCity}|${bus.toCity}|${bus.toArrival}|$minutes',
+      );
     }
   }
 
@@ -187,6 +193,187 @@ class NotificationService {
     for (int i = 0; i < 3; i++) {
       await _notifications.cancel(bus.hashCode + i);
     }
+  }
+
+  Future<void> cancelRepeatingReminder(Bus bus) async {
+    await _notifications.cancel(bus.hashCode + 200);
+  }
+
+  Future<void> rescheduleForNewEta({
+    required Bus bus,
+    required DateTime newArrivalTime,
+  }) async {
+    await initialize();
+    final granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    // Cancel existing alerts for this bus
+    await cancelBusNotification(bus);
+
+    // Recreate a temporary Bus-like view using the new ETA text for payload/title
+    final adjustedBus = Bus(
+      busNumber: bus.busNumber,
+      fromCity: bus.fromCity,
+      toCity: bus.toCity,
+      fromArrival: bus.fromArrival,
+      toArrival: _formatTime(newArrivalTime),
+      stops: bus.stops,
+      location: bus.location,
+    );
+
+    // Schedule using the same logic as scheduleBusArrivalNotification
+    final alertMinutes = [15, 10, 5];
+    for (int i = 0; i < alertMinutes.length; i++) {
+      final minutes = alertMinutes[i];
+      final notificationTime = newArrivalTime.subtract(Duration(minutes: minutes));
+      if (notificationTime.isBefore(DateTime.now())) continue;
+
+      final notificationId = bus.hashCode + i;
+      await _notifications.zonedSchedule(
+        notificationId,
+        '🚌 Bus Alert - $minutes min',
+        'Bus ${bus.busNumber} arriving at ${bus.toCity} in $minutes minutes! (updated)',
+        tz.TZDateTime.from(notificationTime, tz.local),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'bus_arrival_$minutes',
+            'Bus Arrival Notifications',
+            channelDescription: 'Notifications for bus arrival times',
+            importance: Importance.max,
+            priority: Priority.max,
+            icon: '@mipmap/ic_launcher',
+            color: _getAlertColor(minutes),
+            playSound: true,
+            enableVibration: true,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.alarm,
+            visibility: NotificationVisibility.public,
+            autoCancel: true,
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+            styleInformation: BigTextStyleInformation(
+              'Bus ${bus.busNumber} will arrive at ${bus.toCity} in $minutes minutes!\n\nRoute: ${bus.fromCity} → ${bus.toCity}\nArrival Time: ${_formatTime(newArrivalTime)}',
+              contentTitle: '🚌 Bus Alert - $minutes min',
+              htmlFormatBigText: true,
+              summaryText: 'Bus Tracking Alert',
+            ),
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'bus|${bus.busNumber}|${bus.fromCity}|${bus.toCity}|${_formatTime(newArrivalTime)}|$minutes',
+      );
+    }
+
+    // Cleanup one minute after new arrival
+    final cleanupTime = newArrivalTime.add(const Duration(minutes: 1));
+    if (cleanupTime.isAfter(DateTime.now())) {
+      await _notifications.zonedSchedule(
+        bus.hashCode + 100,
+        'Bus Arrival Complete',
+        'Bus ${bus.busNumber} has arrived at ${bus.toCity}',
+        tz.TZDateTime.from(cleanupTime, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'bus_arrival_complete',
+            'Bus Arrival Complete',
+            channelDescription: 'Notifications when bus arrives',
+            importance: Importance.low,
+            priority: Priority.low,
+            icon: '@mipmap/ic_launcher',
+            color: Colors.green,
+            playSound: false,
+            enableVibration: false,
+            fullScreenIntent: false,
+            autoCancel: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'bus_complete_${bus.busNumber}_${bus.toCity}',
+      );
+      await _notifications.cancel(bus.hashCode + 200);
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'pm' : 'am';
+    return '$hour:$minute $period';
+  }
+
+  Future<void> showImmediateBusInfo(Bus bus) async {
+    await initialize();
+    final granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    await _notifications.show(
+      bus.hashCode + 50,
+      '🚌 ${bus.busNumber} — ${bus.fromCity} → ${bus.toCity}',
+      'ETA: ${bus.toArrival}'.trim(),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'bus_info',
+          'Bus Info',
+          channelDescription: 'Immediate bus info alerts',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          visibility: NotificationVisibility.public,
+          styleInformation: BigTextStyleInformation(
+            'Bus ${bus.busNumber}\nRoute: ${bus.fromCity} → ${bus.toCity}\nETA: ${bus.toArrival}',
+            contentTitle: '🚌 Bus ${bus.busNumber}',
+            summaryText: 'Route update',
+          ),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: 'bus|${bus.busNumber}|${bus.fromCity}|${bus.toCity}|${bus.toArrival}|immediate',
+    );
+  }
+
+  Future<void> startRepeatingReminderUntilArrival(Bus bus) async {
+    await initialize();
+    final granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    // Repeating every minute (Android). Will be cancelled at arrival cleanup.
+    await _notifications.periodicallyShow(
+      bus.hashCode + 200,
+      '🚌 ${bus.busNumber} approaching ${bus.toCity}',
+      'Keep ready. ETA: ${bus.toArrival}',
+      RepeatInterval.everyMinute,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'bus_repeat',
+          'Bus Repeating Alerts',
+          channelDescription: 'Repeating reminders until arrival',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.public,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidAllowWhileIdle: true,
+      payload: 'bus|${bus.busNumber}|${bus.fromCity}|${bus.toCity}|${bus.toArrival}|repeat',
+    );
   }
 
   Future<void> cancelAllNotifications() async {

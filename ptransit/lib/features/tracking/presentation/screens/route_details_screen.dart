@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:firebase_database/firebase_database.dart'; // 👈 add this
@@ -19,6 +21,8 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
   final TextEditingController _toController = TextEditingController();
   late SpeechToText _speechToText;
   bool _isListening = false;
+  String _currentTime = '';
+  Timer? _clockTimer;
 
   final DatabaseReference _searchRef = FirebaseDatabase.instance.ref().child(
     "searched_buses",
@@ -31,6 +35,7 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
   void initState() {
     super.initState();
     _speechToText = SpeechToText();
+    _startClock();
   }
 
   /// Show bottom sheet with listening animation
@@ -136,7 +141,24 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
     _speechToText.stop();
     _fromController.dispose();
     _toController.dispose();
+    _clockTimer?.cancel();
     super.dispose();
+  }
+
+  void _startClock() {
+    _updateTime();
+    _clockTimer?.cancel();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    final formatted = DateFormat('hh:mm a').format(now);
+    if (mounted) {
+      setState(() {
+        _currentTime = formatted;
+      });
+    }
   }
 
   @override
@@ -144,7 +166,20 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
     final busProvider = Provider.of<BusProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Find Buses")),
+      appBar: AppBar(
+        title: const Text("Find Buses"),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: Text(
+                _currentTime,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
