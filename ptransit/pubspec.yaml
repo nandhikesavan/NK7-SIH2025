@@ -54,14 +54,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/nk7sih.jpg"
+  adaptive_icon_background: "#ffffff" # background color (Android)
+  adaptive_icon_foreground: "assets/nk7sih.jpg"
 
 flutter:
   uses-material-design: true
 
   # Uncomment and add assets when needed
 assets:
-  - assets/data/buses.json
-
+  - assets/
   # fonts:
   #   - family: YourFontFamily
   #     fonts:

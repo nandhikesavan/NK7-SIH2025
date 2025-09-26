@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:firebase_database/firebase_database.dart'; // 👈 add this
@@ -21,8 +19,6 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
   final TextEditingController _toController = TextEditingController();
   late SpeechToText _speechToText;
   bool _isListening = false;
-  String _currentTime = '';
-  Timer? _clockTimer;
 
   final DatabaseReference _searchRef = FirebaseDatabase.instance.ref().child(
     "searched_buses",
@@ -35,7 +31,6 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
   void initState() {
     super.initState();
     _speechToText = SpeechToText();
-    _startClock();
   }
 
   /// Show bottom sheet with listening animation
@@ -141,24 +136,7 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
     _speechToText.stop();
     _fromController.dispose();
     _toController.dispose();
-    _clockTimer?.cancel();
     super.dispose();
-  }
-
-  void _startClock() {
-    _updateTime();
-    _clockTimer?.cancel();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
-  }
-
-  void _updateTime() {
-    final now = DateTime.now();
-    final formatted = DateFormat('hh:mm a').format(now);
-    if (mounted) {
-      setState(() {
-        _currentTime = formatted;
-      });
-    }
   }
 
   @override
@@ -166,203 +144,322 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
     final busProvider = Provider.of<BusProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Find Buses"),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: Text(
-                _currentTime,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+      backgroundColor: Colors.white,
+     
+      body: Column(
+        children: [
+          // Main content area
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Find Buses",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // From City Input
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _fromController,
+                            decoration: const InputDecoration(
+                              hintText: "From City",
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.mic, color: Color(0xFF6B46C1)),
+                          onPressed: () => _listen(_fromController),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // To City Input
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _toController,
+                            decoration: const InputDecoration(
+                              hintText: "To City",
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.mic, color: Color(0xFF6B46C1)),
+                          onPressed: () => _listen(_toController),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Find Buses Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6B46C1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: () {
+                        final fromCity = _fromController.text.trim();
+                        final toCity = _toController.text.trim();
+
+                        // ✅ 1. Keep provider logic
+                        busProvider.findBuses(fromCity, toCity);
+
+                        // ✅ 2. Save search to Firebase
+                        final searchRef = _searchRef.push();
+                        searchRef.set({
+                          "fromCity": fromCity,
+                          "toCity": toCity,
+                          "timestamp": DateTime.now().toIso8601String(),
+                        });
+
+                        // ✅ 3. Save buses under this search
+                        for (var bus in busProvider.filteredBuses) {
+                          searchRef.child("buses").push().set({
+                            "busNumber": bus.busNumber,
+                            "fromCity": bus.fromCity,
+                            "toCity": bus.toCity,
+                            "fromArrival": bus.fromArrival,
+                            "toArrival": bus.toArrival,
+                            "stops": bus.stops,
+                          });
+                        }
+                      },
+                      child: const Text(
+                        "Find Buses",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Show result buses
+                  Expanded(
+                    child: busProvider.filteredBuses.isEmpty
+                        ? const Center(
+                            child: Text(
+                              "No buses found",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: busProvider.filteredBuses.length,
+                            itemBuilder: (context, index) {
+                              final bus = busProvider.filteredBuses[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.deepPurple.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.directions_bus,
+                                      color: Colors.deepPurple,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    "Bus: ${bus.busNumber}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // ❤️ Like/Unlike + Firebase integration
+                                      InkWell(
+                                        onTap: () {
+                                          busProvider.toggleLike(bus);
+
+                                          if (busProvider.isLiked(bus)) {
+                                            // Save to Firebase
+                                            _likedRef.child(bus.busNumber).set({
+                                              "busNumber": bus.busNumber,
+                                              "fromCity": bus.fromCity,
+                                              "toCity": bus.toCity,
+                                              "fromArrival": bus.fromArrival,
+                                              "toArrival": bus.toArrival,
+                                              "stops": bus.stops,
+                                              "location": bus.location,
+                                            });
+                                          } else {
+                                            // Remove from Firebase
+                                            _likedRef.child(bus.busNumber).remove();
+                                          }
+                                        },
+                                        child: Icon(
+                                          busProvider.isLiked(bus)
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: busProvider.isLiked(bus)
+                                              ? Colors.red
+                                              : Colors.grey,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => MapScreen(bus: bus),
+                                            ),
+                                          );
+                                        },
+                                        child: const Icon(
+                                          Icons.location_on,
+                                          color: Colors.deepPurple,
+                                          size: 30,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      "From: ${bus.fromCity} (${bus.fromArrival})\n"
+                                      "To: ${bus.toCity} (${bus.toArrival})",
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => BusStationPage(bus: bus),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // From City Input
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _fromController,
-                    decoration: const InputDecoration(
-                      labelText: "From City",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mic, color: Colors.blue),
-                  onPressed: () => _listen(_fromController),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => _fromController.clear(),
-                ),
-              ],
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? const Color(0xFF6B46C1) : Colors.grey,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF6B46C1) : Colors.grey,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
-            const SizedBox(height: 10),
-
-            // To City Input
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _toController,
-                    decoration: const InputDecoration(
-                      labelText: "To City",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mic, color: Colors.blue),
-                  onPressed: () => _listen(_toController),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => _toController.clear(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Find Buses Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              onPressed: () {
-                final fromCity = _fromController.text.trim();
-                final toCity = _toController.text.trim();
-
-                // ✅ 1. Keep provider logic
-                busProvider.findBuses(fromCity, toCity);
-
-                // ✅ 2. Save search to Firebase
-                final searchRef = _searchRef.push();
-                searchRef.set({
-                  "fromCity": fromCity,
-                  "toCity": toCity,
-                  "timestamp": DateTime.now().toIso8601String(),
-                });
-
-                // ✅ 3. Save buses under this search
-                for (var bus in busProvider.filteredBuses) {
-                  searchRef.child("buses").push().set({
-                    "busNumber": bus.busNumber,
-                    "fromCity": bus.fromCity,
-                    "toCity": bus.toCity,
-                    "fromArrival": bus.fromArrival,
-                    "toArrival": bus.toArrival,
-                    "stops": bus.stops,
-                  });
-                }
-              },
-              child: const Text(
-                "Find Buses",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Show result buses
-            Expanded(
-              child:
-                  busProvider.filteredBuses.isEmpty
-                      ? const Center(child: Text("No buses found"))
-                      : ListView.builder(
-                        itemCount: busProvider.filteredBuses.length,
-                        itemBuilder: (context, index) {
-                          final bus = busProvider.filteredBuses[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.directions_bus,
-                                color: Colors.orange,
-                              ),
-                              title: Text("Bus: ${bus.busNumber}"),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // ❤️ Like/Unlike + Firebase integration
-                                  InkWell(
-                                    onTap: () {
-                                      busProvider.toggleLike(bus);
-
-                                      if (busProvider.isLiked(bus)) {
-                                        // Save to Firebase
-                                        _likedRef.child(bus.busNumber).set({
-                                          "busNumber": bus.busNumber,
-                                          "fromCity": bus.fromCity,
-                                          "toCity": bus.toCity,
-                                          "fromArrival": bus.fromArrival,
-                                          "toArrival": bus.toArrival,
-                                          "stops": bus.stops,
-                                          "location": bus.location,
-                                        });
-                                      } else {
-                                        // Remove from Firebase
-                                        _likedRef.child(bus.busNumber).remove();
-                                      }
-                                    },
-                                    child: Icon(
-                                      busProvider.isLiked(bus)
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      color:
-                                          busProvider.isLiked(bus)
-                                              ? Colors.red
-                                              : Colors.grey,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => MapScreen(bus: bus),
-                                        ),
-                                      );
-                                    },
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: Colors.green,
-                                      size: 30,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Text(
-                                "From: ${bus.fromCity} (${bus.fromArrival})\n"
-                                "To: ${bus.toCity} (${bus.toArrival})",
-                              ),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => BusStationPage(bus: bus),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../notifications/presentation/screens/notification_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class BusStationPage extends StatefulWidget {
   final Bus bus;
@@ -16,6 +17,7 @@ class BusStationPage extends StatefulWidget {
 
 class _BusStationPageState extends State<BusStationPage> {
   bool _scheduled = false;
+  final DatabaseReference _notifiedRef = FirebaseDatabase.instance.ref().child('notified_buses');
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class _BusStationPageState extends State<BusStationPage> {
       appBar: AppBar(
         title: Text('Bus ${bus.busNumber} Stations'),
         backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -121,7 +124,7 @@ class _BusStationPageState extends State<BusStationPage> {
                                 ? Colors.green
                                 : (index == bus.stops.length - 1
                                     ? Colors.red
-                                    : Colors.orange),
+                                    : Colors.deepPurple),
                       ),
                       title: Text(
                         bus.stops[index],
@@ -172,6 +175,17 @@ class _BusStationPageState extends State<BusStationPage> {
                   final offsets = await _pickAlertOffsets(context);
                   if (offsets == null || offsets.isEmpty) return;
                   await provider.scheduleBusNotificationWithOffsets(bus, offsets);
+                  // Save this bus to Firebase under notified_buses/{busNumber}
+                  await _notifiedRef.child(bus.busNumber).set({
+                    'busNumber': bus.busNumber,
+                    'fromCity': bus.fromCity,
+                    'toCity': bus.toCity,
+                    'fromArrival': bus.fromArrival,
+                    'toArrival': bus.toArrival,
+                    'stops': bus.stops,
+                    'scheduledOffsets': offsets,
+                    'timestamp': DateTime.now().toIso8601String(),
+                  });
                   if (mounted) {
                     setState(() => _scheduled = true);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -184,6 +198,8 @@ class _BusStationPageState extends State<BusStationPage> {
                   }
                 } else {
                   await provider.cancelBusAndRepeating(bus);
+                  // Remove from Firebase when notifications are deactivated
+                  await _notifiedRef.child(bus.busNumber).remove();
                   if (mounted) {
                     setState(() => _scheduled = false);
                     ScaffoldMessenger.of(context).showSnackBar(

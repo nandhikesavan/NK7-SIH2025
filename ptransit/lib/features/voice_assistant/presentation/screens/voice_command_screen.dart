@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../../../core/models/bus.dart';
 import '../../../tracking/presentation/screens/map_screen.dart';
+import '../../../tracking/bus_station_page.dart';
 
 class VoiceCommandScreen extends StatelessWidget {
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref("liked_buses");
@@ -11,7 +12,19 @@ class VoiceCommandScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Liked Buses')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Liked Buses',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: StreamBuilder(
         stream: _dbRef.onValue,
         builder: (context, snapshot) {
@@ -39,10 +52,25 @@ class VoiceCommandScreen extends StatelessWidget {
               final bus = buses[index];
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                color: Colors.white,
+                surfaceTintColor: Colors.white,
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
                 child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BusStationPage(bus: bus),
+                      ),
+                    );
+                  },
                   leading: const Icon(
                     Icons.directions_bus,
-                    color: Colors.orange,
+                    color: Colors.deepPurple,
                   ),
                   title: Text("Bus: ${bus.busNumber}"),
                   subtitle: Text(
@@ -87,7 +115,7 @@ class VoiceCommandScreen extends StatelessWidget {
                         },
                         child: const Icon(
                           Icons.location_on,
-                          color: Colors.green,
+                          color: Colors.deepPurple,
                           size: 30,
                         ),
                       ),
