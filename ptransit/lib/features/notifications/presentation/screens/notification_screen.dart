@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/models/notification_alert.dart';
+import '../../../../core/providers/language_provider.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -13,7 +14,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   @override
-  void initState() {    
+  void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<NotificationProvider>();
@@ -30,10 +31,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Bus Notifications'),
+        title: Text(languageProvider.translate('notifications')),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: const Color.fromARGB(255, 0, 0, 0),
@@ -43,11 +45,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
         stream: FirebaseDatabase.instance.ref().child('notified_buses').onValue,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Text(
+                languageProvider.translate('error') + ': ${snapshot.error}',
+              ),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: Text(languageProvider.translate('loading')));
           }
 
           final dataSnap = snapshot.data?.snapshot;
@@ -56,23 +62,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
               onRefresh: _refreshNotifications,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 100),
-                  Icon(Icons.notifications_off, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                children: [
+                  const SizedBox(height: 100),
+                  const Icon(
+                    Icons.notifications_off,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    'No Scheduled Notifications',
+                    languageProvider.translate('no_buses_found'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    'Schedule multiple alerts (15, 10, 5 min) from the bus tracking screen',
-                    style: TextStyle(color: Colors.grey),
+                    languageProvider.translate('find_buses_button'),
+                    style: const TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -83,11 +93,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
           final raw = dataSnap.value;
           final Map<dynamic, dynamic> map =
               raw is Map ? raw : Map<dynamic, dynamic>.from(raw as dynamic);
-          final items = map.entries.map<Map<String, dynamic>>((entry) {
-            final value = Map<String, dynamic>.from(entry.value as Map);
-            value['__key'] = entry.key.toString();
-            return value;
-          }).toList();
+          final items =
+              map.entries.map<Map<String, dynamic>>((entry) {
+                final value = Map<String, dynamic>.from(entry.value as Map);
+                value['__key'] = entry.key.toString();
+                return value;
+              }).toList();
 
           items.sort((a, b) {
             final at = a['timestamp']?.toString() ?? '';
@@ -122,11 +133,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                     const SizedBox(width: 12),
                     TextButton.icon(
-                      onPressed: items.isEmpty ? null : () => _showClearAllDbSheet(context, items.length),
+                      onPressed:
+                          items.isEmpty
+                              ? null
+                              : () =>
+                                  _showClearAllDbSheet(context, items.length),
                       icon: const Icon(Icons.delete_forever),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.deepPurple,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       label: const Text('Delete All'),
                     ),
@@ -144,10 +162,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     final toCity = m['toCity']?.toString() ?? '';
                     final fromArrival = m['fromArrival']?.toString() ?? '';
                     final toArrival = m['toArrival']?.toString() ?? '';
-                    final List<dynamic> stopsDyn = (m['stops'] as List?) ?? const [];
+                    final List<dynamic> stopsDyn =
+                        (m['stops'] as List?) ?? const [];
                     final stops = stopsDyn.map((e) => e.toString()).toList();
-                    final List<dynamic> offsetsDyn = (m['scheduledOffsets'] as List?) ?? const [];
-                    final offsets = offsetsDyn.map((e) => int.tryParse(e.toString()) ?? 0).where((e) => e > 0).toList();
+                    final List<dynamic> offsetsDyn =
+                        (m['scheduledOffsets'] as List?) ?? const [];
+                    final offsets =
+                        offsetsDyn
+                            .map((e) => int.tryParse(e.toString()) ?? 0)
+                            .where((e) => e > 0)
+                            .toList();
 
                     return _buildRealtimeBusCard(
                       context: context,
@@ -387,8 +411,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 CircleAvatar(
                   backgroundColor: Colors.deepPurple,
                   child: Text(
-                    busNumber.length > 2 ? busNumber.substring(busNumber.length - 2) : busNumber,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    busNumber.length > 2
+                        ? busNumber.substring(busNumber.length - 2)
+                        : busNumber,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -396,7 +426,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bus $busNumber', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Bus $busNumber',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 2),
                       Text('$fromCity → $toCity'),
                     ],
@@ -405,24 +438,45 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(children: [
-                      Icon(Icons.call_made, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(fromArrival, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.call_made,
+                          size: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          fromArrival,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
-                    Row(children: [
-                      Icon(Icons.flag, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(toArrival, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(Icons.flag, size: 14, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(
+                          toArrival,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 IconButton(
                   tooltip: 'Delete',
                   icon: const Icon(Icons.delete, color: Colors.deepPurple),
-                  onPressed: () => _showDeleteDbDialog(context, nodeKey, busNumber),
-                )
+                  onPressed:
+                      () => _showDeleteDbDialog(context, nodeKey, busNumber),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -430,16 +484,35 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: stops.take(5).map((s) => Chip(label: Text(s), backgroundColor: Colors.deepPurple.shade50)).toList(),
+                children:
+                    stops
+                        .take(5)
+                        .map(
+                          (s) => Chip(
+                            label: Text(s),
+                            backgroundColor: Colors.deepPurple.shade50,
+                          ),
+                        )
+                        .toList(),
               ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.notifications_active, size: 16, color: Colors.green.shade700),
+                Icon(
+                  Icons.notifications_active,
+                  size: 16,
+                  color: Colors.green.shade700,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  offsets.isNotEmpty ? 'Alerts: ${offsets.map((e) => '$e min').join(', ')}' : 'Alerts: none',
-                  style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                  offsets.isNotEmpty
+                      ? 'Alerts: ${offsets.map((e) => '$e min').join(', ')}'
+                      : 'Alerts: none',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -449,32 +522,53 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Future<void> _showDeleteDbDialog(BuildContext context, String nodeKey, String busNumber) async {
+  Future<void> _showDeleteDbDialog(
+    BuildContext context,
+    String nodeKey,
+    String busNumber,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Delete Notification'),
-        content: Text('Delete scheduled notifications for Bus $busNumber?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text('Delete Notification'),
+            content: Text('Delete scheduled notifications for Bus $busNumber?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
     );
 
     if (result == true) {
       try {
-        await FirebaseDatabase.instance.ref().child('notified_buses').child(nodeKey).remove();
+        await FirebaseDatabase.instance
+            .ref()
+            .child('notified_buses')
+            .child(nodeKey)
+            .remove();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Deleted notifications for Bus $busNumber'), backgroundColor: Colors.deepPurple),
+            SnackBar(
+              content: Text('Deleted notifications for Bus $busNumber'),
+              backgroundColor: Colors.deepPurple,
+            ),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting: $e'), backgroundColor: Colors.deepPurple),
+            SnackBar(
+              content: Text('Error deleting: $e'),
+              backgroundColor: Colors.deepPurple,
+            ),
           );
         }
       }
@@ -512,7 +606,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                count == null ? 'This will remove all scheduled bus alerts.' : 'This will remove $count scheduled bus alerts.',
+                count == null
+                    ? 'This will remove all scheduled bus alerts.'
+                    : 'This will remove $count scheduled bus alerts.',
                 style: TextStyle(color: Colors.grey.shade700),
               ),
               const SizedBox(height: 16),
@@ -521,7 +617,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.deepPurple),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.deepPurple,
+                      ),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -531,16 +629,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       onPressed: () async {
                         Navigator.pop(context);
                         try {
-                          await FirebaseDatabase.instance.ref().child('notified_buses').remove();
+                          await FirebaseDatabase.instance
+                              .ref()
+                              .child('notified_buses')
+                              .remove();
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('All notifications deleted'), backgroundColor: Colors.deepPurple),
+                              const SnackBar(
+                                content: Text('All notifications deleted'),
+                                backgroundColor: Colors.deepPurple,
+                              ),
                             );
                           }
                         } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error deleting all: $e'), backgroundColor: Colors.deepPurple),
+                              SnackBar(
+                                content: Text('Error deleting all: $e'),
+                                backgroundColor: Colors.deepPurple,
+                              ),
                             );
                           }
                         }

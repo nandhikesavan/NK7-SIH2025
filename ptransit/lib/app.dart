@@ -64,6 +64,36 @@ class _HomePageState extends State<HomePage> {
     VoiceCommandScreen(), // 👈 Liked buses screen
   ];
 
+  Widget buildHome(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(languageProvider.translate('app_title'))),
+      body: _tabs[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.directions_bus),
+            label: languageProvider.translate('routes'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.notifications),
+            label: languageProvider.translate('notifications'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.favorite),
+            label: languageProvider.translate('liked_buses'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -79,7 +109,10 @@ class _HomePageState extends State<HomePage> {
   void _startClock() {
     _updateTime();
     _clockTimer?.cancel();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+    _clockTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateTime(),
+    );
   }
 
   void _updateTime() {
@@ -108,12 +141,13 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: const Color(0xFF6B46C1), // Purple color
             elevation: 0,
             leading: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
+              builder:
+                  (context) => IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
+                  ),
             ),
             title: Row(
               children: [

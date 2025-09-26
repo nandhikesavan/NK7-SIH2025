@@ -1,7 +1,6 @@
 class AppStrings {
   // 🔹 English translations
   static const Map<String, String> en = {
-    // General
     'app_title': 'Punjab Bus Tracker',
     'routes': 'Routes',
     'notifications': 'Notifications',
@@ -21,8 +20,6 @@ class AppStrings {
     'save': 'Save',
     'cancel': 'Cancel',
     'back': 'Back',
-
-    // Bus Related
     'find_buses': 'Find Buses',
     'from_city': 'From City',
     'to_city': 'To City',
@@ -38,14 +35,10 @@ class AppStrings {
     'bus_delayed': 'Your bus is delayed by {minutes} minutes',
     'bus_departed': 'Bus has already departed',
     'bus_cancelled': 'This bus has been cancelled',
-
-    // Language
     'select_language': 'Select Language',
     'choose_your_preferred_language': 'Choose your preferred language',
     'language_changed': 'Language changed to {language}',
     'current_language': 'Current Language',
-
-    // Errors / Status
     'loading': 'Loading...',
     'error': 'Error',
     'network_error': 'Network connection failed',
@@ -54,18 +47,41 @@ class AppStrings {
     'refresh': 'Refresh',
     'success': 'Success',
     'failed': 'Failed',
-
-    // Confirmations
     'yes': 'Yes',
     'no': 'No',
     'ok': 'OK',
     'done': 'Done',
     'exit_app': 'Do you really want to exit the app?',
+    'alert_times': '15, 10, 5 min before arrival',
+    'bus_number': 'Bus {busNumber}',
+    'bus_route': '{fromCity} → {toCity}',
+    'arrives_at': 'Arrives at {arrivalTime}',
+    'multiple_alerts_scheduled': 'Multiple alerts scheduled:',
+    'alert_time': '{time}',
+    'from_arrival': '{fromArrival}',
+    'to_arrival': '{toArrival}',
+    'alerts_scheduled': 'Alerts: {alerts}',
+    'alerts_none': 'Alerts: none',
+    'cancel_notification_confirm':
+        'Are you sure you want to cancel the notification for Bus {busNumber}?',
+    'notification_cancelled': 'Notification for Bus {busNumber} cancelled',
+    'clear_all_confirm':
+        'Are you sure you want to cancel all scheduled notifications?',
+    'delete_notification': 'Delete Notification',
+    'delete_notification_confirm':
+        'Delete scheduled notifications for Bus {busNumber}?',
+    'deleted_notifications': 'Deleted notifications for Bus {busNumber}',
+    'error_deleting': 'Error deleting: {error}',
+    'delete_all_notifications': 'Delete all notifications?',
+    'remove_all_scheduled_alerts': 'This will remove all scheduled bus alerts.',
+    'remove_count_scheduled_alerts':
+        'This will remove {count} scheduled bus alerts.',
+    'all_notifications_deleted': 'All notifications deleted',
+    'error_deleting_all': 'Error deleting all: {error}',
   };
 
   // 🔹 Hindi translations
   static const Map<String, String> hi = {
-    // General
     'app_title': 'पंजाब बस ट्रैकर',
     'routes': 'रूट्स',
     'notifications': 'सूचनाएं',
@@ -85,8 +101,6 @@ class AppStrings {
     'save': 'सेव करें',
     'cancel': 'रद्द करें',
     'back': 'वापस',
-
-    // Bus Related
     'find_buses': 'बसें खोजें',
     'from_city': 'शहर से',
     'to_city': 'शहर तक',
@@ -102,14 +116,10 @@ class AppStrings {
     'bus_delayed': 'आपकी बस {minutes} मिनट विलंबित है',
     'bus_departed': 'बस पहले ही प्रस्थान कर चुकी है',
     'bus_cancelled': 'यह बस रद्द कर दी गई है',
-
-    // Language
     'select_language': 'भाषा चुनें',
     'choose_your_preferred_language': 'अपनी पसंदीदा भाषा चुनें',
     'language_changed': 'भाषा {language} में बदल दी गई',
     'current_language': 'वर्तमान भाषा',
-
-    // Errors / Status
     'loading': 'लोड हो रहा है...',
     'error': 'त्रुटि',
     'network_error': 'नेटवर्क कनेक्शन विफल',
@@ -118,8 +128,6 @@ class AppStrings {
     'refresh': 'रिफ्रेश करें',
     'success': 'सफलता',
     'failed': 'विफल',
-
-    // Confirmations
     'yes': 'हां',
     'no': 'नहीं',
     'ok': 'ठीक',
@@ -129,7 +137,6 @@ class AppStrings {
 
   // 🔹 Tamil translations
   static const Map<String, String> ta = {
-    // General
     'app_title': 'பஞ்சாப் பஸ் டிராக்கர்',
     'routes': 'வழிகள்',
     'notifications': 'அறிவிப்புகள்',
@@ -149,8 +156,6 @@ class AppStrings {
     'save': 'சேமி',
     'cancel': 'ரத்து செய்',
     'back': 'பின் செல்',
-
-    // Bus Related
     'find_buses': 'பஸ்களைக் கண்டறியவும்',
     'from_city': 'நகரத்திலிருந்து',
     'to_city': 'நகரத்திற்கு',
@@ -166,15 +171,11 @@ class AppStrings {
     'bus_delayed': 'உங்கள் பஸ் {minutes} நிமிடங்கள் தாமதமாகிறது',
     'bus_departed': 'பஸ் ஏற்கனவே புறப்பட்டுள்ளது',
     'bus_cancelled': 'இந்த பஸ் ரத்து செய்யப்பட்டது',
-
-    // Language
     'select_language': 'மொழியைத் தேர்ந்தெடுக்கவும்',
     'choose_your_preferred_language':
         'உங்கள் விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்',
     'language_changed': 'மொழி {language} க்கு மாற்றப்பட்டது',
     'current_language': 'தற்போதைய மொழி',
-
-    // Errors / Status
     'loading': 'ஏற்றப்படுகிறது...',
     'error': 'பிழை',
     'network_error': 'பிணைய இணைப்பு தோல்வியடைந்தது',
@@ -183,8 +184,6 @@ class AppStrings {
     'refresh': 'புதுப்பிக்கவும்',
     'success': 'வெற்றி',
     'failed': 'தோல்வி',
-
-    // Confirmations
     'yes': 'ஆம்',
     'no': 'இல்லை',
     'ok': 'சரி',
@@ -194,7 +193,6 @@ class AppStrings {
 
   // 🔹 Punjabi translations
   static const Map<String, String> pa = {
-    // General
     'app_title': 'ਪੰਜਾਬ ਬਸ ਟ੍ਰੈਕਰ',
     'routes': 'ਰੂਟ',
     'notifications': 'ਸੂਚਨਾਵਾਂ',
@@ -214,8 +212,6 @@ class AppStrings {
     'save': 'ਸੰਭਾਲੋ',
     'cancel': 'ਰੱਦ ਕਰੋ',
     'back': 'ਵਾਪਸ',
-
-    // Bus Related
     'find_buses': 'ਬੱਸਾਂ ਲੱਭੋ',
     'from_city': 'ਸ਼ਹਿਰ ਤੋਂ',
     'to_city': 'ਸ਼ਹਿਰ ਤੱਕ',
@@ -227,33 +223,27 @@ class AppStrings {
     'arrival_time': 'ਪਹੁੰਚਣ ਦਾ ਸਮਾਂ',
     'departure_time': 'ਰਵਾਨਗੀ ਦਾ ਸਮਾਂ',
     'estimated_time': 'ਅਨੁਮਾਨਿਤ ਸਮਾਂ',
-    'bus_arriving': 'ਤੁਹਾਡੀ ਬੱਸ ਜਲਦੀ ਪਹੁੰਚ ਰਹੀ ਹੈ',
-    'bus_delayed': 'ਤੁਹਾਡੀ ਬੱਸ {minutes} ਮਿੰਟ ਦੇਰੀ ਨਾਲ ਹੈ',
-    'bus_departed': 'ਬੱਸ ਪਹਿਲਾਂ ਹੀ ਰਵਾਨਾ ਹੋ ਚੁੱਕੀ ਹੈ',
+    'bus_arriving': 'ਤੁਹਾਡੀ ਬੱਸ ਜਲਦੀ ਹੀ ਆ ਰਹੀ ਹੈ',
+    'bus_delayed': 'ਤੁਹਾਡੀ ਬੱਸ {minutes} ਮਿੰਟ ਦੇ ਲਈ ਦੇਰੀ ਨਾਲ ਹੈ',
+    'bus_departed': 'ਬੱਸ ਪਹਿਲਾਂ ਹੀ ਰਵਾਨਾ ਹੋ ਚੁਕੀ ਹੈ',
     'bus_cancelled': 'ਇਹ ਬੱਸ ਰੱਦ ਕਰ ਦਿੱਤੀ ਗਈ ਹੈ',
-
-    // Language
     'select_language': 'ਭਾਸ਼ਾ ਚੁਣੋ',
-    'choose_your_preferred_language': 'ਆਪਣੀ ਪਸੰਦੀਦਾ ਭਾਸ਼ਾ ਚੁਣੋ',
-    'language_changed': 'ਭਾਸ਼ਾ {language} ਵਿੱਚ ਬਦਲ ਦਿੱਤੀ ਗਈ',
+    'choose_your_preferred_language': 'ਆਪਣੀ ਪਸੰਦ ਦੀ ਭਾਸ਼ਾ ਚੁਣੋ',
+    'language_changed': 'ਭਾਸ਼ਾ {language} ਵਿੱਚ ਬਦਲ ਗਈ',
     'current_language': 'ਮੌਜੂਦਾ ਭਾਸ਼ਾ',
-
-    // Errors / Status
     'loading': 'ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ...',
     'error': 'ਗਲਤੀ',
-    'network_error': 'ਨੈਟਵਰਕ ਕੁਨੈਕਸ਼ਨ ਫੇਲ੍ਹ ਹੋ ਗਿਆ',
+    'network_error': 'ਨੈੱਟਵਰਕ ਕਨੈਕਸ਼ਨ ਫੇਲ੍ਹ',
     'server_error': 'ਸਰਵਰ ਜਵਾਬ ਨਹੀਂ ਦੇ ਰਿਹਾ',
-    'retry': 'ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
-    'refresh': 'ਰਿਫਰੈਸ਼ ਕਰੋ',
+    'retry': 'ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
+    'refresh': 'ਨਵੀਂ ਕਰੋ',
     'success': 'ਸਫਲਤਾ',
-    'failed': 'ਅਸਫਲਤਾ',
-
-    // Confirmations
+    'failed': 'ਫੇਲ੍ਹ',
     'yes': 'ਹਾਂ',
     'no': 'ਨਹੀਂ',
     'ok': 'ਠੀਕ ਹੈ',
-    'done': 'ਮੁਕੰਮਲ',
-    'exit_app': 'ਕੀ ਤੁਸੀਂ ਸੱਚਮੁੱਚ ਐਪ ਤੋਂ ਬਾਹਰ ਨਿਕਲਣਾ ਚਾਹੁੰਦੇ ਹੋ?',
+    'done': 'ਹੋ ਗਿਆ',
+    'exit_app': 'ਕੀ ਤੁਸੀਂ ਵਾਸਤਵ ਵਿੱਚ ਐਪ ਤੋਂ ਬਾਹਰ ਨਿਕਲਣਾ ਚਾਹੁੰਦੇ ਹੋ?',
   };
 
   static Map<String, String> getTranslations(String languageCode) {
