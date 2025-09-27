@@ -1,3 +1,4 @@
+import '../../../../core/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -12,8 +13,16 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  String? get _userPhone =>
+      Provider.of<AuthProvider>(context, listen: false).user?.phone;
+  DatabaseReference? get _notifiedRef =>
+      _userPhone == null
+          ? null
+          : FirebaseDatabase.instance.ref().child(
+            'users_by_phone/$_userPhone/notified_buses',
+          );
   @override
-  void initState() {    
+  void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<NotificationProvider>();
@@ -39,134 +48,163 @@ class _NotificationScreenState extends State<NotificationScreen> {
         foregroundColor: const Color.fromARGB(255, 0, 0, 0),
         actions: [],
       ),
-      body: StreamBuilder<DatabaseEvent>(
-        stream: FirebaseDatabase.instance.ref().child('notified_buses').onValue,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      body:
+          _notifiedRef == null
+              ? const Center(child: Text('User not logged in'))
+              : StreamBuilder<DatabaseEvent>(
+                stream: _notifiedRef!.onValue,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-          final dataSnap = snapshot.data?.snapshot;
-          if (dataSnap == null || dataSnap.value == null) {
-            return RefreshIndicator(
-              onRefresh: _refreshNotifications,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 100),
-                  Icon(Icons.notifications_off, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No Scheduled Notifications',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Schedule multiple alerts (15, 10, 5 min) from the bus tracking screen',
-                    style: TextStyle(color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final raw = dataSnap.value;
-          final Map<dynamic, dynamic> map =
-              raw is Map ? raw : Map<dynamic, dynamic>.from(raw as dynamic);
-          final items = map.entries.map<Map<String, dynamic>>((entry) {
-            final value = Map<String, dynamic>.from(entry.value as Map);
-            value['__key'] = entry.key.toString();
-            return value;
-          }).toList();
-
-          items.sort((a, b) {
-            final at = a['timestamp']?.toString() ?? '';
-            final bt = b['timestamp']?.toString() ?? '';
-            return bt.compareTo(at);
-          });
-
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                color: Colors.deepPurple.shade50,
-                child: Row(
-                  children: [
-                    Icon(Icons.schedule, color: Colors.deepPurple),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${items.length} Scheduled Alerts',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                  final dataSnap = snapshot.data?.snapshot;
+                  if (dataSnap == null || dataSnap.value == null) {
+                    return RefreshIndicator(
+                      onRefresh: _refreshNotifications,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 100),
+                          Icon(
+                            Icons.notifications_off,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No Scheduled Notifications',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Schedule multiple alerts (15, 10, 5 min) from the bus tracking screen',
+                            style: TextStyle(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '15, 10, 5 min before arrival',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    TextButton.icon(
-                      onPressed: items.isEmpty ? null : () => _showClearAllDbSheet(context, items.length),
-                      icon: const Icon(Icons.delete_forever),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.deepPurple,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      label: const Text('Delete All'),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final m = items[index];
-                    final nodeKey = m['__key']?.toString() ?? '';
-                    final busNumber = m['busNumber']?.toString() ?? '';
-                    final fromCity = m['fromCity']?.toString() ?? '';
-                    final toCity = m['toCity']?.toString() ?? '';
-                    final fromArrival = m['fromArrival']?.toString() ?? '';
-                    final toArrival = m['toArrival']?.toString() ?? '';
-                    final List<dynamic> stopsDyn = (m['stops'] as List?) ?? const [];
-                    final stops = stopsDyn.map((e) => e.toString()).toList();
-                    final List<dynamic> offsetsDyn = (m['scheduledOffsets'] as List?) ?? const [];
-                    final offsets = offsetsDyn.map((e) => int.tryParse(e.toString()) ?? 0).where((e) => e > 0).toList();
-
-                    return _buildRealtimeBusCard(
-                      context: context,
-                      nodeKey: nodeKey,
-                      busNumber: busNumber,
-                      fromCity: fromCity,
-                      toCity: toCity,
-                      fromArrival: fromArrival,
-                      toArrival: toArrival,
-                      stops: stops,
-                      offsets: offsets,
                     );
-                  },
-                ),
+                  }
+
+                  final raw = dataSnap.value;
+                  final Map<dynamic, dynamic> map =
+                      raw is Map
+                          ? raw
+                          : Map<dynamic, dynamic>.from(raw as dynamic);
+                  final items =
+                      map.entries.map<Map<String, dynamic>>((entry) {
+                        final value = Map<String, dynamic>.from(
+                          entry.value as Map,
+                        );
+                        value['__key'] = entry.key.toString();
+                        return value;
+                      }).toList();
+
+                  items.sort((a, b) {
+                    final at = a['timestamp']?.toString() ?? '';
+                    final bt = b['timestamp']?.toString() ?? '';
+                    return bt.compareTo(at);
+                  });
+
+                  return Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        color: Colors.deepPurple.shade50,
+                        child: Row(
+                          children: [
+                            Icon(Icons.schedule, color: Colors.deepPurple),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${items.length} Scheduled Alerts',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '15, 10, 5 min before arrival',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed:
+                                  items.isEmpty
+                                      ? null
+                                      : () => _showClearAllDbSheet(
+                                        context,
+                                        items.length,
+                                      ),
+                              icon: const Icon(Icons.delete_forever),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.deepPurple,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                              label: const Text('Delete All'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final m = items[index];
+                            final nodeKey = m['__key']?.toString() ?? '';
+                            final busNumber = m['busNumber']?.toString() ?? '';
+                            final fromCity = m['fromCity']?.toString() ?? '';
+                            final toCity = m['toCity']?.toString() ?? '';
+                            final fromArrival =
+                                m['fromArrival']?.toString() ?? '';
+                            final toArrival = m['toArrival']?.toString() ?? '';
+                            final List<dynamic> stopsDyn =
+                                (m['stops'] as List?) ?? const [];
+                            final stops =
+                                stopsDyn.map((e) => e.toString()).toList();
+                            final List<dynamic> offsetsDyn =
+                                (m['scheduledOffsets'] as List?) ?? const [];
+                            final offsets =
+                                offsetsDyn
+                                    .map((e) => int.tryParse(e.toString()) ?? 0)
+                                    .where((e) => e > 0)
+                                    .toList();
+
+                            return _buildRealtimeBusCard(
+                              context: context,
+                              nodeKey: nodeKey,
+                              busNumber: busNumber,
+                              fromCity: fromCity,
+                              toCity: toCity,
+                              fromArrival: fromArrival,
+                              toArrival: toArrival,
+                              stops: stops,
+                              offsets: offsets,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          );
-        },
-      ),
     );
   }
 
@@ -387,8 +425,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 CircleAvatar(
                   backgroundColor: Colors.deepPurple,
                   child: Text(
-                    busNumber.length > 2 ? busNumber.substring(busNumber.length - 2) : busNumber,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    busNumber.length > 2
+                        ? busNumber.substring(busNumber.length - 2)
+                        : busNumber,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -396,7 +440,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bus $busNumber', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Bus $busNumber',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 2),
                       Text('$fromCity → $toCity'),
                     ],
@@ -405,24 +452,45 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(children: [
-                      Icon(Icons.call_made, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(fromArrival, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.call_made,
+                          size: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          fromArrival,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
-                    Row(children: [
-                      Icon(Icons.flag, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(toArrival, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(Icons.flag, size: 14, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(
+                          toArrival,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 IconButton(
                   tooltip: 'Delete',
                   icon: const Icon(Icons.delete, color: Colors.deepPurple),
-                  onPressed: () => _showDeleteDbDialog(context, nodeKey, busNumber),
-                )
+                  onPressed:
+                      () => _showDeleteDbDialog(context, nodeKey, busNumber),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -430,16 +498,35 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: stops.take(5).map((s) => Chip(label: Text(s), backgroundColor: Colors.deepPurple.shade50)).toList(),
+                children:
+                    stops
+                        .take(5)
+                        .map(
+                          (s) => Chip(
+                            label: Text(s),
+                            backgroundColor: Colors.deepPurple.shade50,
+                          ),
+                        )
+                        .toList(),
               ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.notifications_active, size: 16, color: Colors.green.shade700),
+                Icon(
+                  Icons.notifications_active,
+                  size: 16,
+                  color: Colors.green.shade700,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  offsets.isNotEmpty ? 'Alerts: ${offsets.map((e) => '$e min').join(', ')}' : 'Alerts: none',
-                  style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                  offsets.isNotEmpty
+                      ? 'Alerts: ${offsets.map((e) => '$e min').join(', ')}'
+                      : 'Alerts: none',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -449,32 +536,49 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Future<void> _showDeleteDbDialog(BuildContext context, String nodeKey, String busNumber) async {
+  Future<void> _showDeleteDbDialog(
+    BuildContext context,
+    String nodeKey,
+    String busNumber,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Delete Notification'),
-        content: Text('Delete scheduled notifications for Bus $busNumber?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text('Delete Notification'),
+            content: Text('Delete scheduled notifications for Bus $busNumber?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
     );
 
-    if (result == true) {
+    if (result == true && _notifiedRef != null) {
       try {
-        await FirebaseDatabase.instance.ref().child('notified_buses').child(nodeKey).remove();
+        await _notifiedRef!.child(nodeKey).remove();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Deleted notifications for Bus $busNumber'), backgroundColor: Colors.deepPurple),
+            SnackBar(
+              content: Text('Deleted notifications for Bus $busNumber'),
+              backgroundColor: Colors.deepPurple,
+            ),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting: $e'), backgroundColor: Colors.deepPurple),
+            SnackBar(
+              content: Text('Error deleting: $e'),
+              backgroundColor: Colors.deepPurple,
+            ),
           );
         }
       }
@@ -512,7 +616,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                count == null ? 'This will remove all scheduled bus alerts.' : 'This will remove $count scheduled bus alerts.',
+                count == null
+                    ? 'This will remove all scheduled bus alerts.'
+                    : 'This will remove $count scheduled bus alerts.',
                 style: TextStyle(color: Colors.grey.shade700),
               ),
               const SizedBox(height: 16),
@@ -521,7 +627,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.deepPurple),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.deepPurple,
+                      ),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -530,18 +638,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         Navigator.pop(context);
-                        try {
-                          await FirebaseDatabase.instance.ref().child('notified_buses').remove();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('All notifications deleted'), backgroundColor: Colors.deepPurple),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error deleting all: $e'), backgroundColor: Colors.deepPurple),
-                            );
+                        if (_notifiedRef != null) {
+                          try {
+                            await _notifiedRef!.remove();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('All notifications deleted'),
+                                  backgroundColor: Colors.deepPurple,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error deleting all: $e'),
+                                  backgroundColor: Colors.deepPurple,
+                                ),
+                              );
+                            }
                           }
                         }
                       },

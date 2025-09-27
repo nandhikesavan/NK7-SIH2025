@@ -12,6 +12,7 @@ import 'features/tracking/presentation/screens/route_details_screen.dart';
 import 'features/notifications/presentation/screens/notification_screen.dart';
 import 'features/language/presentation/screens/language_selection_screen.dart';
 import 'features/voice_assistant/presentation/screens/voice_command_screen.dart';
+import 'features/authentication/presentation/screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -38,7 +39,14 @@ class MyApp extends StatelessWidget {
               primarySwatch: Colors.orange,
               scaffoldBackgroundColor: const Color(0xFFF5F5F5),
             ),
-            home: const HomePage(),
+            home: Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                if (auth.isLoggedIn) {
+                  return const HomePage();
+                }
+                return const _LoginGate();
+              },
+            ),
           );
         },
       ),
@@ -79,7 +87,10 @@ class _HomePageState extends State<HomePage> {
   void _startClock() {
     _updateTime();
     _clockTimer?.cancel();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+    _clockTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateTime(),
+    );
   }
 
   void _updateTime() {
@@ -108,12 +119,13 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: const Color(0xFF6B46C1), // Purple color
             elevation: 0,
             leading: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
+              builder:
+                  (context) => IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
+                  ),
             ),
             title: Row(
               children: [
@@ -255,5 +267,44 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+}
+
+// A lightweight gate that shows the login screen
+class _LoginGate extends StatelessWidget {
+  const _LoginGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _LoginWrapper();
+  }
+}
+
+class _LoginWrapper extends StatelessWidget {
+  const _LoginWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Defer import to avoid circular deps
+    return _LoginWrapperBody();
+  }
+}
+
+class _LoginWrapperBody extends StatelessWidget {
+  const _LoginWrapperBody({super.key});
+  @override
+  Widget build(BuildContext context) {
+    // Importing here to keep top of file tidy
+    return const _LoginScreenHost();
+  }
+}
+
+class _LoginScreenHost extends StatelessWidget {
+  const _LoginScreenHost({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Use a separate widget file for the actual screen
+    return const LoginScreen();
   }
 }

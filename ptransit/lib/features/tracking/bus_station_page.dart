@@ -3,6 +3,7 @@ import '../../../../core/models/bus.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/providers/notification_provider.dart';
+import '../../../../core/providers/auth_provider.dart';
 import '../notifications/presentation/screens/notification_screen.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -17,7 +18,16 @@ class BusStationPage extends StatefulWidget {
 
 class _BusStationPageState extends State<BusStationPage> {
   bool _scheduled = false;
-  final DatabaseReference _notifiedRef = FirebaseDatabase.instance.ref().child('notified_buses');
+
+  String? get _userPhone =>
+      Provider.of<AuthProvider>(context, listen: false).user?.phone;
+
+  DatabaseReference? get _notifiedRef =>
+      _userPhone == null
+          ? null
+          : FirebaseDatabase.instance.ref().child(
+            'users_by_phone/$_userPhone/notified_buses',
+          );
 
   @override
   Widget build(BuildContext context) {
@@ -170,13 +180,25 @@ class _BusStationPageState extends State<BusStationPage> {
               ),
               onPressed: () async {
                 final provider = context.read<NotificationProvider>();
-                final isActive = provider.isNotificationScheduled(bus.busNumber, bus.toCity);
+                final isActive = provider.isNotificationScheduled(
+                  bus.busNumber,
+                  bus.toCity,
+                );
+                if (_notifiedRef == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('User not logged in')),
+                  );
+                  return;
+                }
                 if (!isActive) {
                   final offsets = await _pickAlertOffsets(context);
                   if (offsets == null || offsets.isEmpty) return;
-                  await provider.scheduleBusNotificationWithOffsets(bus, offsets);
-                  // Save this bus to Firebase under notified_buses/{busNumber}
-                  await _notifiedRef.child(bus.busNumber).set({
+                  await provider.scheduleBusNotificationWithOffsets(
+                    bus,
+                    offsets,
+                  );
+                  // Save this bus to Firebase under users_by_phone/{phone}/notified_buses/{busNumber}
+                  await _notifiedRef!.child(bus.busNumber).set({
                     'busNumber': bus.busNumber,
                     'fromCity': bus.fromCity,
                     'toCity': bus.toCity,
@@ -199,7 +221,7 @@ class _BusStationPageState extends State<BusStationPage> {
                 } else {
                   await provider.cancelBusAndRepeating(bus);
                   // Remove from Firebase when notifications are deactivated
-                  await _notifiedRef.child(bus.busNumber).remove();
+                  await _notifiedRef!.child(bus.busNumber).remove();
                   if (mounted) {
                     setState(() => _scheduled = false);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -211,7 +233,10 @@ class _BusStationPageState extends State<BusStationPage> {
                 }
               },
               label: Text(
-                context.watch<NotificationProvider>().isNotificationScheduled(bus.busNumber, bus.toCity)
+                context.watch<NotificationProvider>().isNotificationScheduled(
+                      bus.busNumber,
+                      bus.toCity,
+                    )
                     ? 'Deactivate'
                     : 'Notify Me',
               ),
@@ -235,24 +260,25 @@ Future<List<int>?> _pickAlertOffsets(BuildContext context) async {
           builder: (context, setState) {
             return Column(
               mainAxisSize: MainAxisSize.min,
-              children: options
-                  .map(
-                    (m) => CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: selected.contains(m),
-                      onChanged: (v) {
-                        setState(() {
-                          if (v == true) {
-                            selected.add(m);
-                          } else {
-                            selected.remove(m);
-                          }
-                        });
-                      },
-                      title: Text('$m minutes before'),
-                    ),
-                  )
-                  .toList(),
+              children:
+                  options
+                      .map(
+                        (m) => CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: selected.contains(m),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                selected.add(m);
+                              } else {
+                                selected.remove(m);
+                              }
+                            });
+                          },
+                          title: Text('$m minutes before'),
+                        ),
+                      )
+                      .toList(),
             );
           },
         ),
